@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Suppress("DEPRECATION")
-    override fun onBackPressed() {
+    override fun onBackPressed
         if (web.canGoBack()) web.goBack() else super.onBackPressed()
     }
 
@@ -118,7 +118,6 @@ class MainActivity : ComponentActivity() {
         var sock: BluetoothSocket? = null
         try {
             sock = dev.createRfcommSocketToServiceRecord(SPP)
-            adapter.cancelDiscovery()
             sock.connect()
             val os: OutputStream = sock.outputStream
             os.write(bytes)
