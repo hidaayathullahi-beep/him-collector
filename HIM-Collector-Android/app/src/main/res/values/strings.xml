@@ -1,0 +1,5 @@
+<resources>
+  <string name="app_name">HIM Collector</string>
+  <!-- ===== CHANGE THIS LINE if your collector web app address is different ===== -->
+  <string name="collector_url">https://masjid.hidaayathullahi.workers.dev/collector.html</string>
+</resources>

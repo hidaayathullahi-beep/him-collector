@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIM — Print setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --g:#0f4c3a; --line:#dcd8cd; --muted:#6b6b6b; }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f3f1ea;color:#1a1a1a;font-family:'Noto Sans Malayalam',system-ui,sans-serif;padding:18px;line-height:1.5}
+  .wrap{max-width:520px;margin:0 auto}
+  h1{font-size:19px;color:var(--g);margin:0 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .btn{display:block;width:100%;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;margin:10px 0;font-family:inherit}
+  .btn.primary{background:var(--g);color:#fff}
+  .btn.ghost{background:#eef2ee;color:var(--g);border:1px solid #cfe0d6}
+  .steps{font-size:14px;padding-left:20px;margin:6px 0}
+  .steps li{margin:5px 0}
+  .status{font-size:14px;margin-top:8px;min-height:20px}
+  .ok{color:var(--g);font-weight:700}
+  .err{color:#b3261e;font-weight:700}
+  .note{font-size:12.5px;color:var(--muted);margin-top:10px}
+  .plabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px}
+  #preview{display:block;margin:0 auto;border:1px solid var(--line);background:#fff;max-width:100%;height:auto;image-rendering:pixelated}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HIM Collector — Print setup</h1>
+  <p class="sub">Direct Bluetooth printing · SEZNIK Veer · Malayalam check</p>
+
+  <div class="card">
+    <b>Do this in order:</b>
+    <ol class="steps">
+      <li>Make sure the Veer is <b>paired</b> in the phone's Bluetooth settings and switched on.</li>
+      <li>Tap <b>Select printer</b> and choose the Veer.</li>
+      <li>Tap <b>Print test slip</b>.</li>
+    </ol>
+    <button class="btn ghost" id="btnPick">🔧 Select printer</button>
+    <button class="btn primary" id="btnPrint">🖨️ Print test slip</button>
+    <div class="status" id="status"></div>
+    <div class="note">No RawBT, no popup — this prints straight to the printer.</div>
+  </div>
+
+  <div class="card">
+    <div class="plabel">The slip (drawn as an image, so Malayalam always prints):</div>
+    <canvas id="preview" width="384" height="40"></canvas>
+  </div>
+
+  <div class="card">
+    <b>All good?</b>
+    <button class="btn ghost" id="btnOpen">➡️ Open the Collector app</button>
+    <div class="note">Once printing works here, tell Shamnad's developer — the real Print button gets wired into the collector app next.</div>
+  </div>
+</div>
+
+<script>
+const N = window.HIMNative;
+const statusEl = document.getElementById('status');
+function setStatus(msg, cls){ statusEl.textContent = msg; statusEl.className = 'status ' + (cls||''); }
+window.HIMNativeResult = function(ok, msg){ ok ? setStatus('✓ Sent to printer.', 'ok') : setStatus('✗ ' + (msg||'Failed'), 'err'); };
+
+const SLIP = {
+  masjid:'ഹിദായത്തുൽ ഇസ്ലാം ജുമാ മസ്ജിദ്', place:'നാമ്പുകുളങ്ങര', fund:'മാസ സംഭാവന',
+  date:'18-09-2026', receipt:'A-101', id:'HIM-234', name:'ഷംനാദ് അമ്പഴയിൽ',
+  house:'അമ്പഴയിൽ വീട്', amount:'₹ 500', dues:'₹ 100', by:'ഇർഷാദ്'
+};
+const W = 384;
+const canvas = document.getElementById('preview');
+
+function layout(){
+  const L=[]; const push=(t,o={})=>L.push(Object.assign({text:t,size:22,weight:600,align:'center',gap:6,box:false,pad:0},o));
+  push(SLIP.masjid,{size:26,weight:700,gap:2});
+  push(SLIP.place,{size:16,weight:400,gap:10});
+  push('— — — — — — — — — — — —',{size:16,weight:400,gap:8});
+  push(SLIP.fund,{size:24,weight:700,gap:10});
+  push('തീയതി: '+SLIP.date+'   നം: '+SLIP.receipt,{size:19,weight:400,align:'left',gap:8});
+  push('ഐഡി: '+SLIP.id,{size:22,weight:700,align:'left',box:true,pad:6,gap:8});
+  push(SLIP.name,{size:23,weight:700,align:'left',gap:1});
+  push(SLIP.house,{size:19,weight:400,align:'left',gap:10});
+  push('തുക: '+SLIP.amount,{size:26,weight:700,align:'left',gap:4});
+  push('കുടിശ്ശിക: '+SLIP.dues,{size:19,weight:400,align:'left',gap:12});
+  push('കൈപ്പറ്റിയത്: '+SLIP.by,{size:19,weight:400,align:'left',gap:8});
+  push('— — — — — — — — — — — —',{size:16,weight:400,gap:6});
+  push('നന്ദി',{size:18,weight:400,gap:4});
+  return L;
+}
+const fontStr = l => l.weight+' '+l.size+'px "Noto Sans Malayalam", system-ui, sans-serif';
+
+async function draw(){
+  const L=layout();
+  try{ await document.fonts.ready; await Promise.all(L.map(l=>document.fonts.load(fontStr(l),' അആ₹0123'))); }catch(e){}
+  const padTop=14, padBot=18, padX=14, extra=8;
+  let h=padTop; L.forEach(l=>{ h += l.size + (l.box?l.pad*2:0) + l.gap + extra; }); h=Math.round(h+padBot);
+  canvas.width=W; canvas.height=h;
+  const c=canvas.getContext('2d');
+  c.fillStyle='#fff'; c.fillRect(0,0,W,h); c.fillStyle='#000'; c.textBaseline='top';
+  let y=padTop;
+  L.forEach(l=>{
+    c.font=fontStr(l);
+    const boxH=l.size+(l.box?l.pad*2:0);
+    if(l.box){ const tw=Math.min(c.measureText(l.text).width+16,W-padX*2); c.strokeStyle='#000'; c.lineWidth=2; c.strokeRect(padX,y,tw,boxH); }
+    const ty=y+(l.box?l.pad:0);
+    if(l.align==='center'){ c.textAlign='center'; c.fillText(l.text,W/2,ty,W-padX*2); }
+    else { c.textAlign='left'; c.fillText(l.text,padX+(l.box?8:0),ty,W-padX*2); }
+    y += boxH + l.gap + extra;
+  });
+}
+
+function escposFromCanvas(){
+  const w=canvas.width, h=canvas.height;
+  const data=canvas.getContext('2d').getImageData(0,0,w,h).data;
+  const bpr=Math.ceil(w/8); const raster=new Uint8Array(bpr*h);
+  for(let yy=0;yy<h;yy++) for(let xx=0;xx<w;xx++){
+    const i=(yy*w+xx)*4; const a=data[i+3]; const lum=0.299*data[i]+0.587*data[i+1]+0.114*data[i+2];
+    if(a>128 && lum<128) raster[yy*bpr+(xx>>3)] |= (0x80>>(xx&7));
+  }
+  const xL=bpr&0xff,xH=(bpr>>8)&0xff,yL=h&0xff,yH=(h>>8)&0xff;
+  const head=[0x1B,0x40, 0x1D,0x76,0x30,0x00, xL,xH,yL,yH];
+  const tail=[0x0A,0x0A,0x0A,0x0A];
+  const out=new Uint8Array(head.length+raster.length+tail.length);
+  out.set(head,0); out.set(raster,head.length); out.set(tail,head.length+raster.length);
+  return out;
+}
+function b64(bytes){ let s=''; const ch=8192; for(let i=0;i<bytes.length;i+=ch) s+=String.fromCharCode.apply(null,bytes.subarray(i,i+ch)); return btoa(s); }
+
+document.getElementById('btnPick').addEventListener('click', ()=>{ if(N&&N.selectPrinter){ N.selectPrinter(); setStatus('Pick the Veer from the list…',''); } else setStatus('Open this inside the HIM Collector app.','err'); });
+document.getElementById('btnPrint').addEventListener('click', ()=>{
+  if(!(N&&N.print)){ setStatus('Open this inside the HIM Collector app.','err'); return; }
+  try{ setStatus('Printing…',''); N.print(b64(escposFromCanvas())); }
+  catch(e){ setStatus('✗ '+e.message,'err'); }
+});
+document.getElementById('btnOpen').addEventListener('click', ()=>{ if(N&&N.collectorUrl){ location.href = N.collectorUrl(); } });
+
+draw();
+</script>
+</body>
+</html>
