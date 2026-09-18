@@ -15,13 +15,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
       - name: Install Gradle 8.7
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
           unzip -q -d /opt/gradle /tmp/gradle.zip
           echo "/opt/gradle/gradle-8.7/bin" >> "$GITHUB_PATH"
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
       - name: Upload APK
