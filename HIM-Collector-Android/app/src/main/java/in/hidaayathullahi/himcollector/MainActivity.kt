@@ -23,6 +23,14 @@ import org.json.JSONObject
 import java.io.OutputStream
 import java.util.UUID
 
+/**
+ * Thin shell for the HIM Collector app.
+ *  - Opens the live collector web app directly (no test page), so collectors have ONE door
+ *    and printing always goes through the native Bluetooth bridge (never RawBT).
+ *  - Exposes window.HIMNative so the web app can pick a printer and print the Malayalam slip.
+ * The web app renders the slip to an image and sends ready-made ESC/POS bytes; this native
+ * code only opens a Bluetooth link to the printer and writes those bytes. It never touches text.
+ */
 class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
@@ -45,10 +53,12 @@ class MainActivity : ComponentActivity() {
         s.mediaPlaybackRequiresUserGesture = false
 
         web.webChromeClient = WebChromeClient()
-        web.webViewClient = WebViewClient()
+        web.webViewClient = WebViewClient() // keep links inside the app
         web.addJavascriptInterface(Bridge(), "HIMNative")
 
-        web.loadUrl("file:///android_asset/testprint.html")
+        // Open the live collector app directly. Collectors never see the test page,
+        // so printing always uses the native bridge below (no RawBT, no popup).
+        web.loadUrl(getString(R.string.collector_url))
     }
 
     @Suppress("DEPRECATION")
@@ -75,6 +85,7 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun selectPrinter() = runOnUiThread { showPicker() }
 
+        /** base64 = the finished ESC/POS bytes built by the web page. */
         @JavascriptInterface
         fun print(base64: String) {
             Thread {
@@ -112,7 +123,7 @@ class MainActivity : ComponentActivity() {
             val os: OutputStream = sock.outputStream
             os.write(bytes)
             os.flush()
-            Thread.sleep(400)
+            Thread.sleep(400) // let the printer finish before we drop the link
         } finally {
             try { sock?.close() } catch (_: Exception) {}
         }
