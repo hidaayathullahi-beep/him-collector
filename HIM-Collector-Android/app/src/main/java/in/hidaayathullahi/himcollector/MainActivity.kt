@@ -23,13 +23,6 @@ import org.json.JSONObject
 import java.io.OutputStream
 import java.util.UUID
 
-/**
- * Thin shell:
- *  - shows a WebView (loads the printer test page first; that page has a button to open the live collector app)
- *  - exposes window.HIMNative to the web page so JavaScript can print directly over Bluetooth
- * The web page renders the Malayalam slip to an image and sends us the ready-made ESC/POS bytes.
- * This native code only opens a Bluetooth link to the printer and writes those bytes. It never touches text.
- */
 class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
@@ -52,16 +45,14 @@ class MainActivity : ComponentActivity() {
         s.mediaPlaybackRequiresUserGesture = false
 
         web.webChromeClient = WebChromeClient()
-        web.webViewClient = WebViewClient() // keep links inside the app
+        web.webViewClient = WebViewClient()
         web.addJavascriptInterface(Bridge(), "HIMNative")
 
-        // v1 boots into the built-in test page; its buttons let you pick the printer,
-        // print a Malayalam test slip, and open the live collector app.
         web.loadUrl("file:///android_asset/testprint.html")
     }
 
     @Suppress("DEPRECATION")
-    override fun onBackPressed
+    override fun onBackPressed() {
         if (web.canGoBack()) web.goBack() else super.onBackPressed()
     }
 
@@ -84,7 +75,6 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun selectPrinter() = runOnUiThread { showPicker() }
 
-        /** base64 = the finished ESC/POS bytes built by the web page. */
         @JavascriptInterface
         fun print(base64: String) {
             Thread {
@@ -122,7 +112,7 @@ class MainActivity : ComponentActivity() {
             val os: OutputStream = sock.outputStream
             os.write(bytes)
             os.flush()
-            Thread.sleep(400) // let the printer finish before we drop the link
+            Thread.sleep(400)
         } finally {
             try { sock?.close() } catch (_: Exception) {}
         }
